@@ -1,3 +1,4 @@
+
 # Triển khai mô hình Reverse Proxy kết hợp giữa Nginx và Apache từ LEMP
 
 ## I. Giới thiệu
@@ -70,6 +71,8 @@ server {
 }
 ```
 
+---
+
 ## IV. Giải thích: Vì sao Nginx đứng trước Apache?
 
 Việc triển khai mô hình Reverse Proxy với Nginx đứng trước Apache là một lựa chọn kiến trúc phổ biến và có lý do rõ ràng về mặt hiệu năng, bảo mật và khả năng mở rộng.
@@ -103,6 +106,8 @@ Nginx hỗ trợ Virtual Host mạnh mẽ:
 - Kết hợp cả HTTP và HTTPS dễ dàng.
 - Gắn SSL riêng biệt cho từng domain.
 
+---
+
 ## V. Kết quả đạt được
 
 ### 1. Mô hình hoạt động hoàn chỉnh
@@ -133,6 +138,8 @@ Nginx hỗ trợ Virtual Host mạnh mẽ:
 - phpMyAdmin cài đặt thành công.
 - Có thể giới hạn truy cập nội bộ qua domain riêng.
 
+---
+
 ## VI. Kết luận
 
 Mô hình Reverse Proxy với Nginx đứng trước Apache trong môi trường LEMP mang lại:
@@ -142,3 +149,56 @@ Mô hình Reverse Proxy với Nginx đứng trước Apache trong môi trường
 - Dễ mở rộng và quản lý trong môi trường thực tế.
 
 Phù hợp cho hệ thống nhỏ đến trung bình cần hiệu suất cao và bảo mật tốt.
+
+---
+
+## VII. So sánh chi tiết: Nginx và Apache
+
+| Tiêu chí                | **Nginx**                           | **Apache**                           |
+|-------------------------|-------------------------------------|--------------------------------------|
+| Kiến trúc chính         | Event-driven, non-blocking I/O     | Process/thread-based (blocking I/O) |
+| Tốc độ xử lý tĩnh       | Rất nhanh                          | Chậm hơn                             |
+| Tài nguyên              | Ít, nhẹ                            | Tốn RAM/CPU nhiều hơn                |
+| Thích hợp cho           | Proxy, load balancing, static file | Xử lý PHP, module dynamic            |
+
+---
+
+### Ưu điểm của Nginx
+
+- Xử lý nội dung tĩnh (ảnh, JS, CSS) cực kỳ nhanh.
+- Làm reverse proxy và load balancer hiệu quả.
+- Có thể termination SSL ngay tại tầng ngoài.
+- Dùng ít RAM, CPU.
+
+###  Nhược điểm
+
+- Không hỗ trợ `.htaccess` (thiếu linh hoạt với cấu hình thư mục).
+- Cấu hình phức tạp hơn với người mới bắt đầu.
+- Thiếu khả năng xử lý dynamic content trực tiếp (cần kết hợp với PHP-FPM hoặc backend server như Apache).
+- Debug lỗi phức tạp hơn nếu không quen cấu trúc log.
+
+
+### Ưu điểm của Apache
+
+- Tích hợp tốt với các module PHP (mod_php).
+- Hỗ trợ `.htaccess` cấu hình từng thư mục.
+- Phù hợp với các CMS như WordPress, Laravel.
+
+### Nhược điểm
+
+- Kiến trúc **process/thread-based**, nên tiêu tốn nhiều tài nguyên hơn (RAM, CPU).
+- **Xử lý nội dung tĩnh kém hơn Nginx**.
+- Hiệu suất giảm đáng kể khi có nhiều kết nối đồng thời.
+- Không tối ưu khi dùng như load balancer.
+
+---
+
+## VIII. Tại sao kết hợp cả hai?
+
+| Kết hợp                 | Lợi ích                                                  |
+|-------------------------|----------------------------------------------------------|
+| `Nginx (proxy)`         | Xử lý SSL, tĩnh, redirect, load balancing                |
+| `Apache (backend)`      | Xử lý nội dung động, PHP, CMS Laravel/WordPress         |
+| Nginx → Apache          | Giao tiếp ngược proxy_pass để tận dụng sức mạnh riêng   |
+
+=> **Tận dụng điểm mạnh của cả hai**, xây dựng hệ thống bảo mật – hiệu năng cao – dễ mở rộng.
