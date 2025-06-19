@@ -69,6 +69,8 @@ server {
     }
 }
 
+---
+
 # IV. Giải thích: Vì sao Nginx đứng trước Apache?
 
 Việc triển khai mô hình Reverse Proxy với Nginx đứng trước Apache là một lựa chọn kiến trúc phổ biến và có lý do rõ ràng về mặt hiệu năng, bảo mật và khả năng mở rộng.
