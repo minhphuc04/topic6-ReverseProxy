@@ -117,11 +117,6 @@ Nginx hỗ trợ **Virtual Host (server block)** rất linh hoạt:
 
 ### 5. Tận dụng điểm mạnh của NGINX khi đứng trước Apache
 
-| Thành phần     | Nhiệm vụ chính                                |
-|----------------|------------------------------------------------|
-| **NGINX**      | Xử lý tĩnh (ảnh, JS, CSS), SSL, phân luồng    |
-| **Apache**     | Xử lý động (PHP, Laravel, WordPress)          |
-
 **Thực tế mô hình đã triển khai:**
 
 - Client gửi HTTP/HTTPS → Nginx (port 80/443).
@@ -132,6 +127,109 @@ Nginx hỗ trợ **Virtual Host (server block)** rất linh hoạt:
 
 >  Như vậy, toàn bộ **ưu điểm về hiệu năng và bảo mật của Nginx** được tận dụng tối đa, trong khi **Apache tập trung xử lý nội dung động** như Laravel và WordPress — vốn là thế mạnh của Apache + PHP.
 ---
+## 1. Mô hình Reverse Proxy: NGINX trước – Apache sau
+
+Khi triển khai NGINX đứng trước Apache theo mô hình Reverse Proxy, hệ thống được chia nhiệm vụ như sau:
+
+| Thành phần | Nhiệm vụ chính |
+|------------|----------------|
+| NGINX      | Xử lý các request tĩnh (ảnh, JS, CSS), thực hiện SSL termination, routing/phân luồng, caching. |
+| Apache     | Xử lý các request động (PHP, Laravel, WordPress), xử lý logic ứng dụng và truy vấn CSDL. |
+
+## 2. Mục tiêu của việc tận dụng NGINX
+
+- Tăng hiệu năng phục vụ tài nguyên tĩnh.
+- Giảm tải cho Apache – vốn chỉ nên tập trung xử lý logic động.
+- Tối ưu bảo mật, tốc độ phản hồi, tài nguyên hệ thống.
+- Dễ mở rộng và bảo trì hệ thống.
+
+## 3. Cách tận dụng điểm mạnh của NGINX
+
+### 3.1. Phục vụ tài nguyên tĩnh trực tiếp từ NGINX
+
+Tài nguyên như .css, .js, .jpg, .png, .svg, .woff nên được xử lý trực tiếp bởi NGINX, không chuyển tiếp qua Apache.
+
+#### Cấu hình ví dụ:
+
+```nginx
+location ~* \.(jpg|jpeg|png|gif|ico|css|js|woff|woff2|ttf|svg|eot|mp4|webp)$ {
+    root /var/www/html;
+    expires 30d;
+    access_log off;
+    try_files $uri $uri/ =404;
+}
+```
+
+#### Giải thích:
+
+- expires 30d: cho phép trình duyệt cache 30 ngày.
+- access_log off: giảm ghi log không cần thiết.
+- try_files: bảo vệ chống lỗi truy cập file không tồn tại.
+
+### 3.2. Caching nội dung bằng NGINX (Proxy Cache)
+
+Giúp tăng tốc cho các request lặp lại (đặc biệt với file HTML hoặc JSON không đổi trong thời gian ngắn), giảm số request xuống Apache.
+
+```nginx
+proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=my_cache:10m inactive=60m;
+proxy_cache_key "$scheme$request_method$host$request_uri";
+
+location / {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_cache my_cache;
+    proxy_cache_valid 200 302 10m;
+    proxy_cache_valid 404 1m;
+}
+```
+
+### 3.3. Tách thư mục chứa file tĩnh riêng biệt
+
+Thay vì để Laravel hoặc WordPress sinh file tĩnh trong cùng thư mục web gốc, nên đặt file tĩnh riêng tại /static:
+
+```nginx
+location /static/ {
+    root /var/www;
+    expires 30d;
+}
+```
+
+Trong code, trỏ ảnh CSS JS qua /static/... thay vì để chung trong /public của Laravel.
+
+### 3.4. SSL Termination tại NGINX
+
+Để giảm tải mã hóa SSL cho Apache, NGINX nên đứng trước để nhận HTTPS, sau đó proxy đến Apache bằng HTTP nội bộ:
+
+```nginx
+server {
+    listen 443 ssl;
+    ssl_certificate /etc/nginx/ssl/cert.pem;
+    ssl_certificate_key /etc/nginx/ssl/key.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+    }
+}
+```
+
+## 4. Luồng xử lý thực tế
+
+- Client gửi request HTTP/HTTPS đến NGINX (port 80/443).
+- NGINX:
+  - Nếu là tài nguyên tĩnh: xử lý trực tiếp, không cần Apache.
+  - Nếu là nội dung động: proxy về Apache theo port nội bộ.
+- Apache xử lý request động (Laravel, WordPress...), trả lại nội dung cho NGINX → gửi cho client.
+
+## 5. Ưu điểm nổi bật
+
+| Ưu điểm           | Mô tả |
+|-------------------|-------|
+| Tối ưu hiệu năng  | NGINX dùng mô hình event-driven nên phục vụ file tĩnh cực nhanh. |
+| Giảm tải Apache   | Apache không phải phục vụ file tĩnh → RAM/CPU chỉ tập trung xử lý PHP. |
+| Tăng bảo mật      | NGINX ẩn server backend (Apache), ngăn dò server thực. |
+| Dễ mở rộng        | NGINX dễ load balancing, mở rộng thêm backend sau này. |
+
 ## V. Kết quả đạt được
 
 ### 1. Mô hình hoạt động hoàn chỉnh
