@@ -239,73 +239,180 @@ Khi triển khai NGINX đứng trước Apache theo mô hình Reverse Proxy, h�
 
 ### 3. Cách tận dụng điểm mạnh của NGINX
 
-#### 3.1. Phục vụ tài nguyên tĩnh trực tiếp từ NGINX
+### 3.1. Phục vụ tài nguyên tĩnh trực tiếp từ NGINX
 
-Tài nguyên như .css, .js, .jpg, .png, .svg, .woff nên được xử lý trực tiếp bởi NGINX, không chuyển tiếp qua Apache.
+Tài nguyên như `.css`, `.js`, `.jpg`, `.png`, `.svg`, `.woff` nên được xử lý trực tiếp bởi NGINX, không chuyển tiếp qua Apache, giúp tăng hiệu suất và giảm tải cho backend.
 
-##### Cấu hình ví dụ:
+**Ví dụ cấu hình cho từng website:**
+
+#### Với WordPress:
 
 ```nginx
 location ~* \.(jpg|jpeg|png|gif|ico|css|js|woff|woff2|ttf|svg|eot|mp4|webp)$ {
-    root /var/www/html;
+    root /var/www/wordpress;
     expires 30d;
     access_log off;
     try_files $uri $uri/ =404;
 }
 ```
 
-##### Giải thích:
-
-- expires 30d: cho phép trình duyệt cache 30 ngày.
-- access_log off: giảm ghi log không cần thiết.
-- try_files: bảo vệ chống lỗi truy cập file không tồn tại.
-
-#### 3.2. Caching nội dung bằng NGINX (Proxy Cache)
-
-Giúp tăng tốc cho các request lặp lại (đặc biệt với file HTML hoặc JSON không đổi trong thời gian ngắn), giảm số request xuống Apache.
+#### Với Laravel:
 
 ```nginx
-proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=my_cache:10m inactive=60m;
-proxy_cache_key "$scheme$request_method$host$request_uri";
-
-location / {
-    proxy_pass http://127.0.0.1:8080;
-    proxy_cache my_cache;
-    proxy_cache_valid 200 302 10m;
-    proxy_cache_valid 404 1m;
+location ~* \.(jpg|jpeg|png|gif|ico|css|js|woff|woff2|ttf|svg|eot|mp4|webp)$ {
+    root /var/www/laravel/public;
+    expires 30d;
+    access_log off;
+    try_files $uri $uri/ =404;
 }
 ```
 
-#### 3.3. Tách thư mục chứa file tĩnh riêng biệt
+**Giải thích:**
+- `root`: trỏ về đúng thư mục chứa mã nguồn tĩnh của từng website.
+- `expires 30d`: cho phép trình duyệt cache 30 ngày.
+- `access_log off`: giảm ghi log không cần thiết.
+- `try_files`: bảo vệ chống lỗi truy cập file không tồn tại.
 
-Thay vì để Laravel hoặc WordPress sinh file tĩnh trong cùng thư mục web gốc, nên đặt file tĩnh riêng tại /static:
+---
+
+### 3.2. Caching nội dung bằng NGINX (Proxy Cache)
+
+Caching giúp tăng tốc cho các request lặp lại (đặc biệt với file HTML hoặc JSON không đổi trong thời gian ngắn), giảm số request xuống Apache.
+
+**Ví dụ cấu hình caching cho từng website:**
+
+#### WordPress (proxy_pass về Apache port 8081):
+
+```nginx
+proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=wp_cache:10m inactive=60m;
+proxy_cache_key "$scheme$request_method$host$request_uri";
+
+location / {
+    proxy_pass http://127.0.0.1:8081;
+    proxy_cache wp_cache;
+    proxy_cache_valid 200 302 10m;
+    proxy_cache_valid 404 1m;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+#### Laravel (proxy_pass về Apache port 8082):
+
+```nginx
+proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=laravel_cache:10m inactive=60m;
+proxy_cache_key "$scheme$request_method$host$request_uri";
+
+location / {
+    proxy_pass http://127.0.0.1:8082;
+    proxy_cache laravel_cache;
+    proxy_cache_valid 200 302 10m;
+    proxy_cache_valid 404 1m;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+**Giải thích:**
+- `proxy_cache_path`: tạo bộ nhớ cache riêng cho từng site.
+- `proxy_cache_key`: định nghĩa khóa cache.
+- `proxy_pass`: chuyển tiếp request về đúng Apache backend theo từng website.
+- `proxy_cache_valid`: chỉ định thời gian hợp lệ của cache cho các trạng thái HTTP.
+- Các dòng `proxy_set_header` đảm bảo Apache nhận đúng thông tin header từ client.
+
+---
+
+### 3.3. Tách thư mục chứa file tĩnh riêng biệt
+
+Thay vì để Laravel hoặc WordPress sinh file tĩnh trong cùng thư mục web gốc, có thể tách file tĩnh riêng tại `/static` để quản lý dễ hơn (tùy chọn nâng cao).
+
+**Ví dụ cấu hình cho từng website:**
+
+#### WordPress
 
 ```nginx
 location /static/ {
-    root /var/www;
+    root /var/www/wordpress;
     expires 30d;
 }
 ```
 
-Trong code, trỏ ảnh CSS JS qua /static/... thay vì để chung trong /public của Laravel.
+#### Laravel
 
-#### 3.4. SSL Termination tại NGINX
+```nginx
+location /static/ {
+    root /var/www/laravel/public;
+    expires 30d;
+}
+```
 
-Để giảm tải mã hóa SSL cho Apache, NGINX nên đứng trước để nhận HTTPS, sau đó proxy đến Apache bằng HTTP nội bộ:
+**Giải thích:**
+- Khi dùng cấu hình này, các file tĩnh nên để hoặc liên kết (symlink) về thư mục `/static` trong code.
+- Các URL ảnh/CSS/JS trong website cần trỏ đúng về `/static/...` để NGINX xử lý trực tiếp.
+
+---
+
+### 3.4. SSL Termination tại NGINX
+
+Để giảm tải mã hóa SSL cho Apache, NGINX nên đứng trước để nhận HTTPS, sau đó proxy về Apache bằng HTTP nội bộ. Cấu hình dưới đây sử dụng đúng chứng chỉ bạn đã gộp (fullchain) và private key.
+
+#### WordPress (`mphuc.wp.vietnix.tech`):
 
 ```nginx
 server {
     listen 443 ssl;
-    ssl_certificate /etc/nginx/ssl/cert.pem;
-    ssl_certificate_key /etc/nginx/ssl/key.pem;
+    server_name mphuc.wp.vietnix.tech;
+
+    ssl_certificate     /etc/ssl/mphuc_wp/fullchain.crt;
+    ssl_certificate_key /etc/ssl/mphuc_wp/private.key;
+
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
 
     location / {
-        proxy_pass http://127.0.0.1:8080;
+        proxy_pass http://127.0.0.1:8081;
         proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 ```
+
+#### Laravel (`mphuc.laravel.vietnix.tech`):
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name mphuc.laravel.vietnix.tech;
+
+    ssl_certificate     /etc/ssl/mphuc_laravel/fullchain.crt;
+    ssl_certificate_key /etc/ssl/mphuc_laravel/private.key;
+
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+
+    location / {
+        proxy_pass http://127.0.0.1:8082;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+**Giải thích:**
+- `listen 443 ssl`: server lắng nghe cổng HTTPS.
+- `ssl_certificate`, `ssl_certificate_key`: đường dẫn file chứng chỉ thực tế của bạn (đã ghép fullchain).
+- `proxy_pass`: chuyển tiếp request tới Apache backend đúng port từng website.
+- Các `proxy_set_header` đảm bảo Apache backend nhận đúng thông tin từ client.
+
+---
 
 ### 4. Luồng xử lý thực tế
 
