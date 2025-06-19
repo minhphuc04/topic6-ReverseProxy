@@ -73,6 +73,7 @@ server {
 
 ---
 
+
 ## IV. Giải thích: Vì sao Nginx đứng trước Apache?
 
 Việc triển khai mô hình Reverse Proxy với Nginx đứng trước Apache là một lựa chọn kiến trúc phổ biến và có lý do rõ ràng về mặt hiệu năng, bảo mật và khả năng mở rộng.
@@ -81,33 +82,56 @@ Việc triển khai mô hình Reverse Proxy với Nginx đứng trước Apache 
 
 Nginx được thiết kế theo mô hình **event-driven, non-blocking I/O**, giúp xử lý hàng ngàn kết nối đồng thời với mức tài nguyên thấp hơn so với Apache.
 
-Khi đứng trước Apache, Nginx xử lý các kết nối tĩnh như CSS, JS, ảnh, video cực kỳ hiệu quả và chỉ proxy các yêu cầu động (PHP) về Apache xử lý.
+Khi đứng trước Apache, Nginx xử lý cực nhanh các request tĩnh như:
+
+- Hình ảnh (JPG, PNG, SVG),
+- CSS,
+- JavaScript,
+- Video...
+
+Chỉ các request động (PHP) mới được chuyển ngược về Apache xử lý.
 
 ### 2. Tăng cường bảo mật
 
 Nginx đóng vai trò như một lớp bảo vệ đầu tiên (frontend), giúp:
 
-- Chặn truy cập trái phép, spam, DDoS cơ bản.
-- Ẩn thông tin chi tiết hệ thống Apache khỏi client.
-- SSL termination tập trung tại Nginx giúp đơn giản hóa cấu hình và bảo vệ.
+- **Chặn truy cập trái phép**, spam, DDoS cơ bản.
+- **Ẩn toàn bộ hệ thống phía sau** như Apache, PHP, CSDL.
+- **SSL termination**: xử lý chứng chỉ SSL/HTTPS tại Nginx giúp giảm tải và tránh cấu hình SSL phức tạp trên Apache.
 
 ### 3. Khả năng mở rộng và phân tán
 
 Nginx dễ dàng đóng vai trò:
 
-- Load Balancer phân phối yêu cầu đến nhiều Apache phía sau.
-- Gateway để chia tách các ứng dụng khác nhau (API, frontend).
+- **Load Balancer** phân phối request tới nhiều backend như Apache, NodeJS...
+- **Gateway** chia tầng rõ ràng giữa API backend và frontend.
+- Có thể kết hợp cùng Docker hoặc Kubernetes để scale linh hoạt.
 
 ### 4. Đơn giản hóa cấu hình đa miền
 
-Nginx hỗ trợ Virtual Host mạnh mẽ:
+Nginx hỗ trợ **Virtual Host (server block)** rất linh hoạt:
 
-- Quản lý nhiều site trên một máy chủ.
-- Kết hợp cả HTTP và HTTPS dễ dàng.
-- Gắn SSL riêng biệt cho từng domain.
+- Quản lý nhiều domain trên cùng 1 server (WordPress, Laravel...).
+- Gắn mỗi domain với SSL riêng biệt từ ZeroSSL, Let’s Encrypt...
+- Cấu hình HTTP/2, HSTS, cache tĩnh trực tiếp.
 
+### 5. Tận dụng điểm mạnh của NGINX khi đứng trước Apache
+
+| Thành phần     | Nhiệm vụ chính                                |
+|----------------|------------------------------------------------|
+| **NGINX**      | Xử lý tĩnh (ảnh, JS, CSS), SSL, phân luồng    |
+| **Apache**     | Xử lý động (PHP, Laravel, WordPress)          |
+
+**Thực tế mô hình đã triển khai:**
+
+- Client gửi HTTP/HTTPS → Nginx (port 80/443).
+- Nginx lọc, giải mã SSL, chuyển tiếp:
+  - HTTP → Apache:8081
+  - HTTPS → Apache:8443
+- Apache xử lý nội dung động, trả kết quả lại cho Nginx → trả về client.
+
+>  Như vậy, toàn bộ **ưu điểm về hiệu năng và bảo mật của Nginx** được tận dụng tối đa, trong khi **Apache tập trung xử lý nội dung động** như Laravel và WordPress — vốn là thế mạnh của Apache + PHP.
 ---
-
 ## V. Kết quả đạt được
 
 ### 1. Mô hình hoạt động hoàn chỉnh
