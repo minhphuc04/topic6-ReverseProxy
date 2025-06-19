@@ -115,7 +115,7 @@ Nginx hỗ trợ **Virtual Host (server block)** rất linh hoạt:
 - Gắn mỗi domain với SSL riêng biệt từ ZeroSSL, Let’s Encrypt...
 - Cấu hình HTTP/2, HSTS, cache tĩnh trực tiếp.
 
-## 5. Tận dụng điểm mạnh của NGINX khi đứng trước Apache
+## *. Tận dụng điểm mạnh của NGINX khi đứng trước Apache
 
 **Thực tế mô hình đã triển khai:**
 
