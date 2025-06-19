@@ -73,8 +73,102 @@ server {
 
 ---
 
+## IV. Cấu hình Nginx Reverse Proxy hoàn chỉnh
+### 1. Website WordPress (mphuc.wp.vietnix.tech)
 
-## IV. Giải thích: Vì sao Nginx đứng trước Apache?
+server {
+    listen 80;
+    server_name mphuc.wp.vietnix.tech;
+
+    # Tự động chuyển HTTP sang HTTPS
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name mphuc.wp.vietnix.tech;
+
+    # Đường dẫn chứng chỉ thực tế đã tạo (fullchain)
+    ssl_certificate     /etc/ssl/mphuc_wp/fullchain.crt;
+    ssl_certificate_key /etc/ssl/mphuc_wp/private.key;
+
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+
+    # Giao tiếp về Apache (chạy port 8081 hoặc 8080 tùy bạn cấu hình Apache vhost)
+    location / {
+        proxy_pass http://127.0.0.1:8081;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Phục vụ tài nguyên tĩnh trực tiếp từ Nginx (nếu cần)
+    location ~* \.(jpg|jpeg|png|gif|ico|css|js|woff|woff2|ttf|svg|eot|mp4|webp)$ {
+        root /var/www/wordpress;
+        expires 30d;
+        access_log off;
+        try_files $uri $uri/ =404;
+    }
+}
+
+### 2. Website Laravel (mphuc.laravel.vietnix.tech)
+
+server {
+    listen 80;
+    server_name mphuc.laravel.vietnix.tech;
+
+    # Tự động chuyển HTTP sang HTTPS
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name mphuc.laravel.vietnix.tech;
+
+    ssl_certificate     /etc/ssl/mphuc_laravel/fullchain.crt;
+    ssl_certificate_key /etc/ssl/mphuc_laravel/private.key;
+
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+
+    # Giao tiếp về Apache (chạy port 8082 hoặc 8080 tùy bạn cấu hình Apache vhost)
+    location / {
+        proxy_pass http://127.0.0.1:8082;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Phục vụ tài nguyên tĩnh trực tiếp từ Nginx (nếu cần)
+    location ~* \.(jpg|jpeg|png|gif|ico|css|js|woff|woff2|ttf|svg|eot|mp4|webp)$ {
+        root /var/www/laravel/public;
+        expires 30d;
+        access_log off;
+        try_files $uri $uri/ =404;
+    }
+}
+
+    Lưu ý: Nếu cả hai site Apache đều dùng chung port 8080, hãy đảm bảo vhost Apache tách biệt theo ServerName. Nếu mỗi site một port, chỉnh lại proxy_pass cho đúng port backend.
+
+### 3. Default Vhost (Xử lý IP/domain lạ)
+
+server {
+    listen 80 default_server;
+    listen 443 ssl default_server;
+    server_name _;
+
+    ssl_certificate     /etc/ssl/certs/zerossl_default.crt;
+    ssl_certificate_key /etc/ssl/private/zerossl_default.key;
+
+    location / {
+        return 403 "Access Denied.";
+    }
+}
+
+## V. Giải thích: Vì sao Nginx đứng trước Apache?
 
 Việc triển khai mô hình Reverse Proxy với Nginx đứng trước Apache là một lựa chọn kiến trúc phổ biến và có lý do rõ ràng về mặt hiệu năng, bảo mật và khả năng mở rộng.
 
@@ -230,7 +324,7 @@ server {
 | Tăng bảo mật      | NGINX ẩn server backend (Apache), ngăn dò server thực. |
 | Dễ mở rộng        | NGINX dễ load balancing, mở rộng thêm backend sau này. |
 
-## V. Kết quả đạt được
+## VII. Kết quả đạt được
 
 ### 1. Mô hình hoạt động hoàn chỉnh
 
@@ -262,7 +356,7 @@ server {
 
 ---
 
-## VI. Kết luận
+## VIII. Kết luận
 
 Mô hình Reverse Proxy với Nginx đứng trước Apache trong môi trường LEMP mang lại:
 
@@ -274,7 +368,7 @@ Phù hợp cho hệ thống nhỏ đến trung bình cần hiệu suất cao và
 
 ---
 
-## VII. So sánh chi tiết: Nginx và Apache
+## IX. So sánh chi tiết: Nginx và Apache
 
 | Tiêu chí                | **Nginx**                           | **Apache**                           |
 |-------------------------|-------------------------------------|--------------------------------------|
@@ -315,7 +409,7 @@ Phù hợp cho hệ thống nhỏ đến trung bình cần hiệu suất cao và
 
 ---
 
-## VIII. Tại sao kết hợp cả hai?
+## XX. Tại sao kết hợp cả hai?
 
 | Kết hợp                 | Lợi ích                                                  |
 |-------------------------|----------------------------------------------------------|
