@@ -227,16 +227,6 @@ Nginx hỗ trợ **Virtual Host (server block)** rất linh hoạt:
 
 ## *. Tận dụng điểm mạnh của NGINX khi đứng trước Apache
 
-**Thực tế mô hình đã triển khai:**
-
-- Client gửi HTTP/HTTPS → Nginx (port 80/443).
-- Nginx lọc, giải mã SSL, chuyển tiếp:
-  - HTTP → Apache:8081
-  - HTTPS → Apache:8443
-- Apache xử lý nội dung động, trả kết quả lại cho Nginx → trả về client.
-
->  Như vậy, toàn bộ **ưu điểm về hiệu năng và bảo mật của Nginx** được tận dụng tối đa, trong khi **Apache tập trung xử lý nội dung động** như Laravel và WordPress — vốn là thế mạnh của Apache + PHP.
-> 
 ### 1. Mô hình Reverse Proxy: NGINX trước – Apache sau
 
 Khi triển khai NGINX đứng trước Apache theo mô hình Reverse Proxy, hệ thống được chia nhiệm vụ như sau:
