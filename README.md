@@ -75,7 +75,7 @@ server {
 
 ## IV. Cấu hình Nginx Reverse Proxy hoàn chỉnh
 ### 1. Website WordPress (mphuc.wp.vietnix.tech)
-
+---
 server {
     listen 80;
     server_name mphuc.wp.vietnix.tech;
@@ -83,6 +83,7 @@ server {
     # Tự động chuyển HTTP sang HTTPS
     return 301 https://$host$request_uri;
 }
+---
 
 server {
     listen 443 ssl;
