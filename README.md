@@ -59,16 +59,24 @@ Tiếp tục từ mô hình **LEMP** (Linux – Nginx – MySQL – PHP) đã c�
 ```nginx
 server {
     listen 80 default_server;
-    listen 443 ssl default_server;
+    listen [::]:80 default_server;
     server_name _;
 
-    ssl_certificate     /etc/ssl/certs/zerossl_default.crt;
-    ssl_certificate_key /etc/ssl/private/zerossl_default.key;
-
-    location / {
-        return 403 "Access Denied.";
-    }
+    return 403 "Access Denied. Not allowed.";
 }
+
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name _;
+
+    ssl_certificate     /etc/ssl/mphuc_wp/certificate.crt;
+    ssl_certificate_key /etc/ssl/mphuc_wp/private.key;
+
+    return 403 "Access Denied. Not allowed.";
+}
+
+
 ```
 
 ---
@@ -158,16 +166,23 @@ server {
 
 server {
     listen 80 default_server;
-    listen 443 ssl default_server;
+    listen [::]:80 default_server;
     server_name _;
 
-    ssl_certificate     /etc/ssl/certs/zerossl_default.crt;
-    ssl_certificate_key /etc/ssl/private/zerossl_default.key;
-
-    location / {
-        return 403 "Access Denied.";
-    }
+    return 403 "Access Denied. Not allowed.";
 }
+
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name _;
+
+    ssl_certificate     /etc/ssl/mphuc_wp/certificate.crt;
+    ssl_certificate_key /etc/ssl/mphuc_wp/private.key;
+
+    return 403 "Access Denied. Not allowed.";
+}
+
 
 ## V. Giải thích: Vì sao Nginx đứng trước Apache?
 
