@@ -231,13 +231,19 @@ nano /var/www/mphuc_laravel/app/Http/Middleware/TrustProxies.php
 
 Chỉnh sửa dòng protected $proxies; thành protected $proxies='*';
 Sau đó kích hoạt:
+```
 sudo ln -s /etc/nginx/sites-available/mphuc.laravel.vietnix.tech /etc/nginx/sites-enabled/
 sudo ln -s /etc/nginx/sites-available/mphuc.wp.vietnix.tech /etc/nginx/sites-enabled/
+```
 ### Bước 5: Khởi động lại dịch vụ
+```
 sudo systemctl restart apache2
 sudo systemctl restart nginx
+```
 ### Bước 6: Bật module SSL:
+```
 sudo a2enmod ssl
+```
 ## IV. Giải thích: Vì sao Nginx đứng trước Apache?
 
 Việc triển khai mô hình Reverse Proxy với Nginx đứng trước Apache là một lựa chọn kiến trúc phổ biến và có lý do rõ ràng về mặt hiệu năng, bảo mật và khả năng mở rộng.
