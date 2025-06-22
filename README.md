@@ -4,84 +4,13 @@
 ## I. Giới thiệu
 
 Tiếp tục từ mô hình **LEMP** (Linux – Nginx – MySQL – PHP) đã cài đặt trước đó, bài này xây dựng mô hình **Reverse Proxy** kết hợp **Nginx** và **Apache** để chạy 2 website với yêu cầu như sau:
-
----
-
-## II. Thành phần công nghệ sử dụng
-
-- **Nginx**: Web Server đứng trước, làm reverse proxy
-- **Apache2**: Web Server phía sau, xử lý động
-- **PHP**: Ngôn ngữ xử lý server-side
-- **MySQL**: Hệ quản trị cơ sở dữ liệu
-- **phpMyAdmin**: Giao diện quản lý CSDL
-- **ZeroSSL**: Cung cấp chứng chỉ SSL cho các domain
-
----
-
-## III. Yêu cầu triển khai
-
-### 1. Cấu trúc Reverse Proxy
-
-- Mô hình kết hợp giữa:
-  - Nginx: reverse proxy xử lý tầng ngoài cùng (HTTP/HTTPS)
-  - Apache: xử lý nội dung động (PHP/WordPress/Laravel)
-- Reverse theo cả 2 giao thức:
-  - `http (nginx) → http (apache)`
-  - `https (nginx) → https (apache)`
-
----
-
-### 2. Website sử dụng
-
-- Sử dụng **Virtual Hosts** cho từng domain
-- Gắn vào 2 source code tương ứng:
-
-| Website           | Loại      | Domain                        |
-|------------------|-----------|-------------------------------|
-| Website WordPress | CMS       | `mphuc.wp.vietnix.tech`       |
-| Website Laravel   | Framework | `mphuc.laravel.vietnix.tech`  |
-
----
-
-### 3. Yêu cầu bảo mật
-
-- Áp dụng chứng chỉ **SSL từ ZeroSSL** cho cả hai domain
-- Cả hai website đều hoạt động trên:
-  - `HTTP` (`port 80`)
-  - `HTTPS` (`port 443`)
-
----
-
-### 4. Default Vhost
-
-- Thiết lập **default vhost** để xử lý mọi domain lạ hoặc IP trỏ trực tiếp về VPS:
-
-```nginx
-server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
-    server_name _;
-
-    return 403 "Access Denied. Not allowed.";
-}
-
-server {
-    listen 443 ssl default_server;
-    listen [::]:443 ssl default_server;
-    server_name _;
-
-    ssl_certificate     /etc/ssl/mphuc_wp/certificate.crt;
-    ssl_certificate_key /etc/ssl/mphuc_wp/private.key;
-
-    return 403 "Access Denied. Not allowed.";
-}
-
-
-```
-
----
-
-## IV. Cấu hình Nginx Reverse Proxy hoàn chỉnh
+## II. Xây dựng mô hình reverse proxy kết hợp nginx và apache
+### Bước 1: Cài các gói cần thiết
+sudo apt update && sudo apt install apache2 php libapache2-mod-php php-mysql mysql-server phpmyadmin unzip -y
+### Bước 2: Apache listen cổng 8080
+Listen 8080
+Listen 8443
+### Bước 3:. Cấu hình Nginx Reverse Proxy hoàn chỉnh
 ### 1. Website WordPress (mphuc.wp.vietnix.tech)
 ### Chỉnh sửa file Nginx (/etc/nginx/sites-available/mphuc.wp.vietnix.tech)
 ---
@@ -291,9 +220,18 @@ server {
 
     return 403 "Access Denied. Not allowed.";
 }
-
-
-## V. Giải thích: Vì sao Nginx đứng trước Apache?
+### Bước 4: Sửa lại nội dung file TrustProxies.php để Laravel tin tưởng proxy (TrustProxies Middleware)
+nano /var/www/mphuc_laravel/app/Http/Middleware/TrustProxies.php
+Chỉnh sửa dòng protected $proxies; thành protected $proxies='*';
+Sau đó kích hoạt:
+sudo ln -s /etc/nginx/sites-available/mphuc.laravel.vietnix.tech /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/mphuc.wp.vietnix.tech /etc/nginx/sites-enabled/
+### Bước 5: Khởi động lại dịch vụ
+sudo systemctl restart apache2
+sudo systemctl restart nginx
+### Bước 6: Bật module SSL:
+sudo a2enmod ssl
+## IV. Giải thích: Vì sao Nginx đứng trước Apache?
 
 Việc triển khai mô hình Reverse Proxy với Nginx đứng trước Apache là một lựa chọn kiến trúc phổ biến và có lý do rõ ràng về mặt hiệu năng, bảo mật và khả năng mở rộng.
 
@@ -403,7 +341,7 @@ proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=wp_cache:10m inactive=60m
 proxy_cache_key "$scheme$request_method$host$request_uri";
 
 location / {
-    proxy_pass http://127.0.0.1:8081;
+    proxy_pass http://127.0.0.1:8080;
     proxy_cache wp_cache;
     proxy_cache_valid 200 302 10m;
     proxy_cache_valid 404 1m;
@@ -546,51 +484,9 @@ server {
 | Tăng bảo mật      | NGINX ẩn server backend (Apache), ngăn dò server thực. |
 | Dễ mở rộng        | NGINX dễ load balancing, mở rộng thêm backend sau này. |
 
-## VII. Kết quả đạt được
 
-### 1. Mô hình hoạt động hoàn chỉnh
 
-- Nginx reverse proxy cho toàn bộ truy cập.
-- Apache xử lý nội dung động (PHP/WordPress/Laravel).
-- Hệ thống phân tầng rõ ràng, tối ưu hiệu suất.
-
-### 2. Hai website hoạt động độc lập
-
-| Domain                            | Trạng thái | Ghi chú                     |
-|-----------------------------------|------------|------------------------------|
-| https://mphuc.wp.vietnix.tech     | Online     | WordPress qua Nginx + Apache |
-| https://mphuc.laravel.vietnix.tech| Online     | Laravel qua Nginx + Apache   |
-
-### 3. Hỗ trợ đầy đủ HTTP và HTTPS
-
-- Tự động redirect từ HTTP sang HTTPS nếu cấu hình.
-- SSL từ ZeroSSL được trình duyệt tin cậy.
-
-### 4. Default vhost xử lý đúng
-
-- Các truy cập IP/domain lạ đều bị từ chối.
-- Tránh rò rỉ thông tin hệ thống.
-
-### 5. phpMyAdmin truy cập nội bộ
-
-- phpMyAdmin cài đặt thành công.
-- Có thể giới hạn truy cập nội bộ qua domain riêng.
-
----
-
-## VIII. Kết luận
-
-Mô hình Reverse Proxy với Nginx đứng trước Apache trong môi trường LEMP mang lại:
-
-- Tối ưu hiệu suất và bảo mật.
-- Dễ cấu hình nhiều website và chứng chỉ SSL.
-- Dễ mở rộng và quản lý trong môi trường thực tế.
-
-Phù hợp cho hệ thống nhỏ đến trung bình cần hiệu suất cao và bảo mật tốt.
-
----
-
-## IX. So sánh chi tiết: Nginx và Apache
+## V. So sánh chi tiết: Nginx và Apache
 
 | Tiêu chí                | **Nginx**                           | **Apache**                           |
 |-------------------------|-------------------------------------|--------------------------------------|
@@ -631,7 +527,7 @@ Phù hợp cho hệ thống nhỏ đến trung bình cần hiệu suất cao và
 
 ---
 
-## XX. Tại sao kết hợp cả hai?
+## VI. Tại sao kết hợp cả hai?
 
 | Kết hợp                 | Lợi ích                                                  |
 |-------------------------|----------------------------------------------------------|
