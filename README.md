@@ -225,8 +225,9 @@ server {
 ```
 
 ### Bước 4: Sửa lại nội dung file TrustProxies.php để Laravel tin tưởng proxy (TrustProxies Middleware)
-
+```
 nano /var/www/mphuc_laravel/app/Http/Middleware/TrustProxies.php
+```
 
 Chỉnh sửa dòng protected $proxies; thành protected $proxies='*';
 Sau đó kích hoạt:
