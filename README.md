@@ -14,7 +14,7 @@ Listen 8443
 ### 1. Website WordPress (mphuc.wp.vietnix.tech)
 ### Chỉnh sửa file Nginx (/etc/nginx/sites-available/mphuc.wp.vietnix.tech)
 ---
-server {
+```server {
     listen 80;
     server_name mphuc.wp.vietnix.tech;
     
@@ -69,10 +69,11 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
-
+```
 ---
 ### Chỉnh sửa file Apache (/etc/apache2/sites-available/mphuc_wp.conf)
 ---
+```
 <VirtualHost *:8080>
     DocumentRoot /var/www/html/Source_wp
     ServerName mphuc.wp.vietnix.tech
@@ -103,7 +104,7 @@ server {
     ErrorLog ${APACHE_LOG_DIR}/mphuc.wp.vietnix.tech-error.log
     CustomLog ${APACHE_LOG_DIR}/mphuc.wp.vietnix.tech-access.log combined
 </VirtualHost>
-
+```
 ---
 ### 2. Website Laravel (mphuc.laravel.vietnix.tech)
 ### Chỉnh sửa file Nginx (/etc/nginx/sites-available/mphuc.laravel.vietnix.tech)
