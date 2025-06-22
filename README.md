@@ -332,53 +332,6 @@ location ~* \.(jpg|jpeg|png|gif|ico|css|js|woff|woff2|ttf|svg|eot|mp4|webp)$ {
 
 Caching giúp tăng tốc cho các request lặp lại (đặc biệt với file HTML hoặc JSON không đổi trong thời gian ngắn), giảm số request xuống Apache.
 
-**Ví dụ cấu hình caching cho từng website:**
-
-#### WordPress (proxy_pass về Apache port 8081):
-
-```nginx
-proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=wp_cache:10m inactive=60m;
-proxy_cache_key "$scheme$request_method$host$request_uri";
-
-location / {
-    proxy_pass http://127.0.0.1:8080;
-    proxy_cache wp_cache;
-    proxy_cache_valid 200 302 10m;
-    proxy_cache_valid 404 1m;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-}
-```
-
-#### Laravel (proxy_pass về Apache port 8082):
-
-```nginx
-proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=laravel_cache:10m inactive=60m;
-proxy_cache_key "$scheme$request_method$host$request_uri";
-
-location / {
-    proxy_pass http://127.0.0.1:8082;
-    proxy_cache laravel_cache;
-    proxy_cache_valid 200 302 10m;
-    proxy_cache_valid 404 1m;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-}
-```
-
-**Giải thích:**
-- `proxy_cache_path`: tạo bộ nhớ cache riêng cho từng site.
-- `proxy_cache_key`: định nghĩa khóa cache.
-- `proxy_pass`: chuyển tiếp request về đúng Apache backend theo từng website.
-- `proxy_cache_valid`: chỉ định thời gian hợp lệ của cache cho các trạng thái HTTP.
-- Các dòng `proxy_set_header` đảm bảo Apache nhận đúng thông tin header từ client.
-
----
-
 ### 3.3. Tách thư mục chứa file tĩnh riêng biệt
 
 Thay vì để Laravel hoặc WordPress sinh file tĩnh trong cùng thư mục web gốc, có thể tách file tĩnh riêng tại `/static` để quản lý dễ hơn (tùy chọn nâng cao).
@@ -415,57 +368,16 @@ location /static/ {
 
 #### WordPress (`mphuc.wp.vietnix.tech`):
 
-```nginx
-server {
-    listen 443 ssl;
-    server_name mphuc.wp.vietnix.tech;
-
-    ssl_certificate     /etc/ssl/mphuc_wp/fullchain.crt;
+    ssl_certificate /etc/ssl/mphuc_wp/certificate.crt;
     ssl_certificate_key /etc/ssl/mphuc_wp/private.key;
-
-    ssl_protocols       TLSv1.2 TLSv1.3;
-    ssl_ciphers         HIGH:!aNULL:!MD5;
-
-    location / {
-        proxy_pass http://127.0.0.1:8081;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
+    ssl_trusted_certificate /etc/ssl/mphuc_wp/ca_bundle.crt;
 
 #### Laravel (`mphuc.laravel.vietnix.tech`):
 
-```nginx
-server {
-    listen 443 ssl;
-    server_name mphuc.laravel.vietnix.tech;
-
-    ssl_certificate     /etc/ssl/mphuc_laravel/fullchain.crt;
+    ssl_certificate /etc/ssl/mphuc_laravel/certificate.crt;
     ssl_certificate_key /etc/ssl/mphuc_laravel/private.key;
+    ssl_trusted_certificate /etc/ssl/mphuc_laravel/ca_bundle.crt;
 
-    ssl_protocols       TLSv1.2 TLSv1.3;
-    ssl_ciphers         HIGH:!aNULL:!MD5;
-
-    location / {
-        proxy_pass http://127.0.0.1:8082;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-**Giải thích:**
-- `listen 443 ssl`: server lắng nghe cổng HTTPS.
-- `ssl_certificate`, `ssl_certificate_key`: đường dẫn file chứng chỉ thực tế của bạn (đã ghép fullchain).
-- `proxy_pass`: chuyển tiếp request tới Apache backend đúng port từng website.
-- Các `proxy_set_header` đảm bảo Apache backend nhận đúng thông tin từ client.
-
----
 
 ### 4. Luồng xử lý thực tế
 
