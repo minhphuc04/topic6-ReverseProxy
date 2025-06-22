@@ -83,85 +83,194 @@ server {
 
 ## IV. Cấu hình Nginx Reverse Proxy hoàn chỉnh
 ### 1. Website WordPress (mphuc.wp.vietnix.tech)
+### Chỉnh sửa file Nginx (/etc/nginx/sites-available/mphuc.wp.vietnix.tech)
 ---
 server {
     listen 80;
     server_name mphuc.wp.vietnix.tech;
 
-    # Tự động chuyển HTTP sang HTTPS
-    return 301 https://$host$request_uri;
-}
----
-
-server {
-    listen 443 ssl;
-    server_name mphuc.wp.vietnix.tech;
-
-    # Đường dẫn chứng chỉ thực tế đã tạo (fullchain)
-    ssl_certificate     /etc/ssl/mphuc_wp/fullchain.crt;
-    ssl_certificate_key /etc/ssl/mphuc_wp/private.key;
-
-    ssl_protocols       TLSv1.2 TLSv1.3;
-    ssl_ciphers         HIGH:!aNULL:!MD5;
-
-    # Giao tiếp về Apache (chạy port 8081 hoặc 8080 tùy bạn cấu hình Apache vhost)
-    location / {
-        proxy_pass http://127.0.0.1:8081;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # Phục vụ tài nguyên tĩnh trực tiếp từ Nginx (nếu cần)
-    location ~* \.(jpg|jpeg|png|gif|ico|css|js|woff|woff2|ttf|svg|eot|mp4|webp)$ {
-        root /var/www/wordpress;
+    location ~* \.(gif|jpg|jpeg|png|ico|wmv|3gp|avi|mpg|mpeg|mp4|flv|mp3|mid|js|css|html|htm|wml)$ {
+        root /var/www/html/Source_wp;
         expires 30d;
-        access_log off;
-        try_files $uri $uri/ =404;
     }
-}
 
-### 2. Website Laravel (mphuc.laravel.vietnix.tech)
+    if ($http_user_agent ~* (wget|curl|sqlmap|nessus|acunetix|fimap|nikto|scanner)) {
+        return 403;
+    }
 
-server {
-    listen 80;
-    server_name mphuc.laravel.vietnix.tech;
+    if ($request_method !~ ^(GET|POST|HEAD)$) {
+        return 444;
+    }
 
-    # Tự động chuyển HTTP sang HTTPS
-    return 301 https://$host$request_uri;
-}
-
-server {
-    listen 443 ssl;
-    server_name mphuc.laravel.vietnix.tech;
-
-    ssl_certificate     /etc/ssl/mphuc_laravel/fullchain.crt;
-    ssl_certificate_key /etc/ssl/mphuc_laravel/private.key;
-
-    ssl_protocols       TLSv1.2 TLSv1.3;
-    ssl_ciphers         HIGH:!aNULL:!MD5;
-
-    # Giao tiếp về Apache (chạy port 8082 hoặc 8080 tùy bạn cấu hình Apache vhost)
     location / {
-        proxy_pass http://127.0.0.1:8082;
+        proxy_pass http://127.0.0.1:8080;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
+}
 
-    # Phục vụ tài nguyên tĩnh trực tiếp từ Nginx (nếu cần)
-    location ~* \.(jpg|jpeg|png|gif|ico|css|js|woff|woff2|ttf|svg|eot|mp4|webp)$ {
+server {
+    listen 443 ssl http2;
+    server_name mphuc.wp.vietnix.tech;
+
+    ssl_certificate /etc/ssl/mphuc_wp/certificate.crt;
+    ssl_certificate_key /etc/ssl/mphuc_wp/private.key;
+    ssl_trusted_certificate /etc/ssl/mphuc_wp/ca_bundle.crt;
+
+    location ~* \.(gif|jpg|jpeg|png|ico|wmv|3gp|avi|mpg|mpeg|mp4|flv|mp3|mid|js|css|html|htm|wml)$ {
+        root /var/www/html/Source_wp;
+        expires 30d;
+    }
+
+    if ($http_user_agent ~* (wget|curl|sqlmap|nessus|acunetix|fimap|nikto|scanner)) {
+        return 403;
+    }
+
+    if ($request_method !~ ^(GET|POST|HEAD)$) {
+        return 444;
+    }
+
+    location / {
+        proxy_pass https://127.0.0.1:8443;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+---
+### Chỉnh sửa file Apache (/etc/apache2/sites-available/mphuc_wp.conf)
+---
+<VirtualHost *:8080>
+    DocumentRoot /var/www/html/Source_wp
+    ServerName mphuc.wp.vietnix.tech
+
+    <Directory "/var/www/html/Source_wp">
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/mphuc.wp.vietnix.tech-error.log
+    CustomLog ${APACHE_LOG_DIR}/mphuc.wp.vietnix.tech-access.log combined
+</VirtualHost>
+
+<VirtualHost *:8443>
+    DocumentRoot /var/www/html/Source_wp
+    ServerName mphuc.wp.vietnix.tech
+
+    SSLEngine on
+    SSLCertificateFile /etc/ssl/mphuc_wp/certificate.crt
+    SSLCertificateKeyFile /etc/ssl/mphuc_wp/private.key
+    SSLCertificateChainFile /etc/ssl/mphuc_wp/ca_bundle.crt
+
+    <Directory "/var/www/html/Source_wp">
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/mphuc.wp.vietnix.tech-error.log
+    CustomLog ${APACHE_LOG_DIR}/mphuc.wp.vietnix.tech-access.log combined
+</VirtualHost>
+
+---
+### 2. Website Laravel (mphuc.laravel.vietnix.tech)
+### Chỉnh sửa file Nginx (/etc/nginx/sites-available/mphuc.laravel.vietnix.tech)
+server {
+    listen 80;
+    server_name mphuc.laravel.vietnix.tech;
+
+    location ~* \.(gif|jpg|jpeg|png|ico|wmv|3gp|avi|mpg|mpeg|mp4|flv|mp3|mid|js|css|html|htm|wml)$ {
         root /var/www/laravel/public;
         expires 30d;
-        access_log off;
-        try_files $uri $uri/ =404;
+    }
+
+    if ($http_user_agent ~* (wget|curl|sqlmap|nessus|acunetix|fimap|nikto|scanner)) {
+        return 403;
+    }
+
+    if ($request_method !~ ^(GET|POST|HEAD)$) {
+        return 444;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 
-    Lưu ý: Nếu cả hai site Apache đều dùng chung port 8080, hãy đảm bảo vhost Apache tách biệt theo ServerName. Nếu mỗi site một port, chỉnh lại proxy_pass cho đúng port backend.
+server {
+    listen 443 ssl http2;
+    server_name mphuc.laravel.vietnix.tech;
 
+    ssl_certificate /etc/ssl/mphuc_laravel/certificate.crt;
+    ssl_certificate_key /etc/ssl/mphuc_laravel/private.key;
+    ssl_trusted_certificate /etc/ssl/mphuc_laravel/ca_bundle.crt;
+
+    location ~* \.(gif|jpg|jpeg|png|ico|wmv|3gp|avi|mpg|mpeg|mp4|flv|mp3|mid|js|css|html|htm|wml)$ {
+        root /var/www/laravel/public;
+        expires 30d;
+    }
+
+    if ($http_user_agent ~* (wget|curl|sqlmap|nessus|acunetix|fimap|nikto|scanner)) {
+        return 403;
+    }
+
+    if ($request_method !~ ^(GET|POST|HEAD)$) {
+        return 444;
+    }
+
+    location / {
+        proxy_pass https://127.0.0.1:8443;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+### Chỉnh sửa file Apache (/etc/apache2/sites-available/mphuc_laravel.conf)
+---
+<VirtualHost *:8080>
+    DocumentRoot /var/www/laravel/public
+    ServerName mphuc.laravel.vietnix.tech
+
+    <Directory "/var/www/laravel/public">
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/mphuc.laravel.vietnix.tech-error.log
+    CustomLog ${APACHE_LOG_DIR}/mphuc.laravel.vietnix.tech-access.log combined
+
+    RewriteEngine On
+</VirtualHost>
+
+<VirtualHost *:8443>
+    DocumentRoot /var/www/laravel/public
+    ServerName mphuc.laravel.vietnix.tech
+
+    SSLEngine on
+    SSLCertificateFile /etc/ssl/mphuc_laravel/certificate.crt
+    SSLCertificateKeyFile /etc/ssl/mphuc_laravel/private.key
+    SSLCertificateChainFile /etc/ssl/mphuc_laravel/ca_bundle.crt
+
+    <Directory "/var/www/laravel/public">
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/mphuc.laravel.vietnix.tech-error.log
+    CustomLog ${APACHE_LOG_DIR}/mphuc.laravel.vietnix.tech-access.log combined
+
+    RewriteEngine On
+</VirtualHost>
+
+---
 ### 3. Default Vhost (Xử lý IP/domain lạ)
 
 server {
