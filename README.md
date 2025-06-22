@@ -17,7 +17,7 @@ Listen 8443
 server {
     listen 80;
     server_name mphuc.wp.vietnix.tech;
-
+    
     location ~* \.(gif|jpg|jpeg|png|ico|wmv|3gp|avi|mpg|mpeg|mp4|flv|mp3|mid|js|css|html|htm|wml)$ {
         root /var/www/html/Source_wp;
         expires 30d;
