@@ -108,6 +108,7 @@ server {
 ---
 ### 2. Website Laravel (mphuc.laravel.vietnix.tech)
 ### Chỉnh sửa file Nginx (/etc/nginx/sites-available/mphuc.laravel.vietnix.tech)
+```
 server {
     listen 80;
     server_name mphuc.laravel.vietnix.tech;
@@ -163,8 +164,9 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
+```
 ### Chỉnh sửa file Apache (/etc/apache2/sites-available/mphuc_laravel.conf)
----
+```
 <VirtualHost *:8080>
     DocumentRoot /var/www/laravel/public
     ServerName mphuc.laravel.vietnix.tech
@@ -199,10 +201,9 @@ server {
 
     RewriteEngine On
 </VirtualHost>
-
----
+```
 ### 3. Default Vhost (Xử lý IP/domain lạ)
-
+```
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
@@ -221,6 +222,8 @@ server {
 
     return 403 "Access Denied. Not allowed.";
 }
+```
+
 ### Bước 4: Sửa lại nội dung file TrustProxies.php để Laravel tin tưởng proxy (TrustProxies Middleware)
 
 nano /var/www/mphuc_laravel/app/Http/Middleware/TrustProxies.php
